@@ -90,6 +90,11 @@ func (h *Handler) RecordTransaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		h.logger.Error("invalid request body",
+			"request_id", requestID,
+			"timestamp", timestamp,
+			"error", err.Error(),
+		)
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid body"})
 		return
 	}
@@ -97,6 +102,12 @@ func (h *Handler) RecordTransaction(w http.ResponseWriter, r *http.Request) {
 	txnIDStr := r.PathValue("id")
 	txnID, err := strconv.ParseInt(txnIDStr, 10, 64)
 	if err != nil {
+		h.logger.Error("invalid transaction ID",
+			"request_id", requestID,
+			"timestamp", timestamp,
+			"txn_id_str", txnIDStr,
+			"error", err.Error(),
+		)
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid transaction ID"})
 		return
 	}
