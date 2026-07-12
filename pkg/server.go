@@ -1,6 +1,7 @@
 package ledger
 
 import (
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -9,7 +10,16 @@ import (
 )
 
 func StartServer() error {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	// Compose stdout + optional file output so Promtail can scrape the file
+	var writer io.Writer = os.Stdout
+	if logFile := os.Getenv("DEMO_LOG_FILE"); logFile != "" {
+		f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err == nil {
+			writer = io.MultiWriter(os.Stdout, f)
+		}
+	}
+
+	logger := slog.New(slog.NewJSONHandler(writer, nil))
 	slog.SetDefault(logger)
 
 	ledgerSvc := NewLedgerService()
