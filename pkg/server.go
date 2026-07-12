@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func StartServer() error {
@@ -13,6 +15,13 @@ func StartServer() error {
 	ledgerSvc := NewLedgerService()
 	handler := NewHandler(ledgerSvc, logger)
 
+	shutdown, err := SetupTracing()
+	if err != nil {
+		logger.Error("failed to setup tracing", "error", err)
+	} else {
+		defer shutdown()
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /transactions/{id}", handler.GetTransaction)
 	mux.HandleFunc("POST /transactions/{id}", handler.RecordTransaction)
@@ -20,11 +29,13 @@ func StartServer() error {
 		writeJSON(w, 200, map[string]string{"status": "ok", "service": "ledger"})
 	})
 
+	otelHandler := otelhttp.NewHandler(mux, "ledger")
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8003"
 	}
 
 	logger.Info("starting ledger service", "port", port)
-	return http.ListenAndServe(":"+port, mux)
+	return http.ListenAndServe(":"+port, otelHandler)
 }

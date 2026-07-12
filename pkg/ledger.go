@@ -4,6 +4,9 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 var (
@@ -25,6 +28,15 @@ func NewLedgerService() *LedgerService {
 }
 
 func (s *LedgerService) RecordTransaction(ctx context.Context, txnID int64, amount float64) error {
+	tracer := otel.Tracer("demo-ledger-service")
+	ctx, span := tracer.Start(ctx, "ledger.record_transaction")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.Int64("txn_id", txnID),
+		attribute.Float64("amount", amount),
+	)
+
 	storeMu.Lock()
 	defer storeMu.Unlock()
 	store[txnID] = &Transaction{
@@ -37,13 +49,24 @@ func (s *LedgerService) RecordTransaction(ctx context.Context, txnID int64, amou
 }
 
 func (s *LedgerService) GetTransaction(ctx context.Context, txnID int64) (*Transaction, error) {
+	tracer := otel.Tracer("demo-ledger-service")
+	ctx, span := tracer.Start(ctx, "ledger.lookup_transaction")
+	defer span.End()
+
+	span.SetAttributes(attribute.Int64("txn_id", txnID))
+
 	storeMu.RLock()
 	defer storeMu.RUnlock()
 
 	txn, ok := store[txnID]
 	if !ok {
+		span.SetAttributes(
+			attribute.Bool("found", false),
+			attribute.String("error", "transaction not found"),
+		)
 		return nil, nil
 	}
 
+	span.SetAttributes(attribute.Bool("found", true))
 	return txn, nil
 }
