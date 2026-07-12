@@ -58,6 +58,7 @@ func (h *Handler) GetTransaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if txn == nil {
+		TransactionsNotFound.Inc()
 		h.logger.Info("transaction not found",
 			"request_id", requestID,
 			"timestamp", timestamp,
@@ -68,6 +69,7 @@ func (h *Handler) GetTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	TransactionsFound.Inc()
 	h.logger.Info("transaction found",
 		"request_id", requestID,
 		"timestamp", timestamp,

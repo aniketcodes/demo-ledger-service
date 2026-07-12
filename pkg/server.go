@@ -28,6 +28,7 @@ func StartServer() error {
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]string{"status": "ok", "service": "ledger"})
 	})
+	mux.Handle("GET /metrics", MetricsHandler())
 
 	otelHandler := otelhttp.NewHandler(mux, "ledger")
 
